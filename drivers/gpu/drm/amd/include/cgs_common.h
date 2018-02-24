@@ -101,6 +101,7 @@ enum cgs_system_info_id {
 	CGS_SYSTEM_INFO_PCIE_SUB_SYS_ID,
 	CGS_SYSTEM_INFO_PCIE_SUB_SYS_VENDOR_ID,
 	CGS_SYSTEM_INFO_PCIE_BUS_DEVFN,
+	CGS_SYSTEM_INFO_VRAM_WIDTH,
 	CGS_SYSTEM_INFO_ID_MAXIMUM,
 };
 
@@ -427,6 +428,9 @@ struct amd_pp_init;
 typedef void* (*cgs_register_pp_handle)(struct cgs_device *cgs_device,
 			int (*call_back_func)(struct amd_pp_init *, void **));
 
+typedef int (*cgs_set_temperature_range)(struct cgs_device *cgs_device,
+					int min_temperature,
+					int max_temperature);
 struct cgs_ops {
 	/* memory management calls (similar to KFD interface) */
 	cgs_alloc_gpu_mem_t alloc_gpu_mem;
@@ -464,6 +468,7 @@ struct cgs_ops {
 	cgs_enter_safe_mode enter_safe_mode;
 	cgs_lock_grbm_idx lock_grbm_idx;
 	cgs_register_pp_handle register_pp_handle;
+	cgs_set_temperature_range set_temperature_range;
 };
 
 struct cgs_os_ops; /* To be define in OS-specific CGS header */
@@ -544,5 +549,8 @@ struct cgs_device
 		CGS_CALL(lock_grbm_idx, cgs_device, lock)
 #define cgs_register_pp_handle(cgs_device, call_back_func) \
 		CGS_CALL(register_pp_handle, cgs_device, call_back_func)
+
+#define cgs_set_temperature_range(dev, min_temp, max_temp)	\
+	CGS_CALL(set_temperature_range, dev, min_temp, max_temp)
 
 #endif /* _CGS_COMMON_H */

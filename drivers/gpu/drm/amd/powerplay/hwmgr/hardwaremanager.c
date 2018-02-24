@@ -79,6 +79,11 @@ int phm_enable_dynamic_state_management(struct pp_hwmgr *hwmgr)
 	bool enabled;
 	PHM_FUNC_CHECK(hwmgr);
 
+	if (smum_is_dpm_running(hwmgr)) {
+		pr_info("dpm has been enabled\n");
+		return 0;
+	}
+
 	if (NULL != hwmgr->hwmgr_func->dynamic_state_management_enable)
 		ret = hwmgr->hwmgr_func->dynamic_state_management_enable(hwmgr);
 
@@ -95,6 +100,11 @@ int phm_disable_dynamic_state_management(struct pp_hwmgr *hwmgr)
 	bool enabled;
 
 	PHM_FUNC_CHECK(hwmgr);
+
+	if (!smum_is_dpm_running(hwmgr)) {
+		pr_info("dpm has been disabled\n");
+		return 0;
+	}
 
 	if (hwmgr->hwmgr_func->dynamic_state_management_disable)
 		ret = hwmgr->hwmgr_func->dynamic_state_management_disable(hwmgr);
@@ -223,26 +233,25 @@ int phm_register_thermal_interrupt(struct pp_hwmgr *hwmgr, const void *info)
 * Initializes the thermal controller subsystem.
 *
 * @param    pHwMgr  the address of the powerplay hardware manager.
-* @param    pTemperatureRange the address of the structure holding the temperature range.
 * @exception PP_Result_Failed if any of the paramters is NULL, otherwise the return value from the dispatcher.
 */
-int phm_start_thermal_controller(struct pp_hwmgr *hwmgr, struct PP_TemperatureRange *temperature_range)
+int phm_start_thermal_controller(struct pp_hwmgr *hwmgr)
 {
-	struct PP_TemperatureRange range;
+	int ret = 0;
+	struct PP_TemperatureRange range = {TEMP_RANGE_MIN, TEMP_RANGE_MAX};
 
-	if (temperature_range == NULL) {
-		range.max = TEMP_RANGE_MAX;
-		range.min = TEMP_RANGE_MIN;
-	} else {
-		range.max = temperature_range->max;
-		range.min = temperature_range->min;
-	}
+	if (hwmgr->hwmgr_func->get_thermal_temperature_range)
+		hwmgr->hwmgr_func->get_thermal_temperature_range(
+				hwmgr, &range);
+
 	if (phm_cap_enabled(hwmgr->platform_descriptor.platformCaps,
 			PHM_PlatformCaps_ThermalController)
 			&& hwmgr->hwmgr_func->start_thermal_controller != NULL)
-		return hwmgr->hwmgr_func->start_thermal_controller(hwmgr, &range);
+		ret = hwmgr->hwmgr_func->start_thermal_controller(hwmgr, &range);
 
-	return 0;
+	cgs_set_temperature_range(hwmgr->device, range.min, range.max);
+
+	return ret;
 }
 
 
